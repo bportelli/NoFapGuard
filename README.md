@@ -1,7 +1,7 @@
 # NoFapGuard
-The app that intervenes against lustful infractions with a distracting obstruction.
+*The app that intervenes against lustful infractions with a distracting obstruction.*
 
-In plain English: if this app detects an inappropriate image on screen, a fullscreen window will prompt you to type out a verse selected randomly from the Bible. It won't get out of your way until the task is complete, giving you enough time to cool off, and then quickly close your windows before the next check.
+This app runs in the background. If the app detects an inappropriate image on screen, a fullscreen window (the intervention) will prompt you to type out a verse selected randomly from the Bible to get you to cool off. It won't get out of your way until the task is complete. You then get a few seconds to quickly close your windows before the next check.
 
 Fair warning, for anyone attempting to use this seriously to help with NoFap (or a similar commitment): **This app is not a substitute for discipline.** It takes some harsher actions against browser activity, esp. searches, via the keyword-scanning feature, with the assumption that the user is a). relying on a browser to access triggering media (because the user has already deleted anything troublesome from their computer... right? RIGHT?) and b). already has a url scanner/blocker in place against triggering websites.
 
@@ -24,9 +24,9 @@ python -m main
 Full screenshots are taken (of multiple monitors if available) regularly, and with increased frequency when the main active window is a browser. This is a core feature of this app.
 
 ### Keyword Scans
-The keyword scanner searches window titles for "unsafe" keywords (which you define in config.ini). The keyword scanner looks, particularly, for browsers where a search-engine search has just been run, and an exact match of a search against an unsafe keyword immediately triggers an intervention. A fuzzy match triggers a visual inspection (image classification).
+The keyword scanner searches window titles for "unsafe" keywords (which you define in config.ini). The keyword scanner looks, particularly, for browsers where a search-engine search has just been run, and an exact match of a search against an unsafe keyword immediately triggers an intervention. A fuzzy match triggers a visual scan.
 
-### Keyword Scans
+### Committed Mode
 "Committed mode" (set to "True" by default) means that the user can't press Esc to close the intervention window; the window will close when the task is complete.
 
 ## Developer Notes
@@ -39,8 +39,8 @@ The keyword scanner searches window titles for "unsafe" keywords (which you defi
 - Not tested on cartoons / drawings
 - No way to stop, besides a keyboard interrupt, closing the command prompt, or Task Manager
 - Interventions only block up to 2 monitors
-- Images too small / low-qual to classify: I have mitigated this with the use of MediaPipe to 'focus in' on body parts (and crop out the rest of the screen), but MP can be thrown off by images where... "not enough"... of a body is visible. Ideally, there's a better way to trim off the parts of a screen that aren't part of "the image".
-- Sound is still on.
+- Images too small / low-qual to classify: I have mitigated this with MediaPipe to 'focus in' on body parts (and crop out the rest of the screen), but MP can be thrown off by images where... "not enough"... of a body is visible. Ideally, there would be a better way to trim off the parts of a screen that aren't part of "the image".
+- Sound is still on while the intervention is running.
 - This is a Windows app: Mac/Linux users can possibly be catered for by swapping out DesktopMagic for [MSS](https://pypi.org/project/mss/) and writing a new set of functions for detecting window locations, getting handles, etc.
 - Testing tempts developers... for most of testing, you can mitigate this by using images that trigger the detector, and not yourself, such as what you might find on an Image search for "3d model human upperbody".
 
