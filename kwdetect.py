@@ -43,6 +43,7 @@ UNSAFEKEYWORDS = []
 
 
 def detectSearch(fgwindow):
+    '''Detect search terms using regex patterns.'''
     patterns = [
         r"^(?:Search\:)?(.*)(( \-| \—| \|| at|\:) (Google |Reddit )?(Search!?|YouTube|[\w|\s]*Yandex|Flickr|DuckDuckGo)( Images)?)(.*)", # Google, Bing, YouTube, Flickr, DuckDuckGo, Yandex, Reddit
         r"^(.*)(( \—|\:) [\w|\s]*\u042f\u043d\u0434\u0435\u043a\u0441(?: \u041a\u0430\u0440\u0442\u0438\u043d\u043a\u0430\u0445)?)(.*)", # Yandex RU / Images
@@ -65,10 +66,12 @@ def detectSearch(fgwindow):
     return searchterm
 
 def readKeyWords():
+    '''Read Unsafe keywords from config, for keyword match'''
+    #print('Reading Keywords')
     #with lockK:
     global UNSAFEKEYWORDS
     kws = loadConfig(lockC)['Unsafe_Keywords']['unsafe_kws']
-    UNSAFEKEYWORDS = kws.split()
+    UNSAFEKEYWORDS = kws.split('\n')
     #print('Finished Reading Keywords')
     return UNSAFEKEYWORDS
 

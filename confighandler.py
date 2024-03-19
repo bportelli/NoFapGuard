@@ -7,6 +7,7 @@ from threading import Lock
 lockC = Lock() # Lock for Config
 CONFIG = {}
 
+# Functions
 def save_ini(fpath = 'test.ini', dict_in = {}):
     '''Save a dictionary to an INI file'''
     if not dict_in:
@@ -30,11 +31,11 @@ def read_ini(fpath):
     return output_dict     
 # NOTE: output_dict is a dictionary. Where values are also dicts, their keys are in lowercase
 
-def loadConfig(lockC):
+def loadConfig(lockC, forcereload = False):
     '''Return config file (read when necessary)'''
     with lockC:
         global CONFIG 
-        if CONFIG:
+        if CONFIG and not forcereload:
             return CONFIG
         else:
             fpath = 'config.ini'
@@ -42,7 +43,15 @@ def loadConfig(lockC):
                 shutil.copy('default_config.ini', 'config.ini')
             # READ config.ini and parse contents
             CONFIG = read_ini(fpath)
+            print('Config Loaded from File')
             return CONFIG
+        
+def editConfigFile():
+    '''Open config file for editing'''
+    fpath = 'config.ini'
+    if not os.path.isfile(fpath):
+        shutil.copy('default_config.ini', 'config.ini')
+    os.startfile(fpath)
 
 # Keep for testing
 if __name__ == '__main__':

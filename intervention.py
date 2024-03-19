@@ -2,16 +2,31 @@ import tkinter as tk
 import random
 import csv
 import logging
+from time import sleep
 from monitorsetup import get_monitors_info
 from confighandler import loadConfig, lockC
 #from screengrab import getfullDisplayRects_tuple, getfullDisplayRects_noscaling_tuple
 #from tkinter import ttk
 
-COMMITTEDMODE = loadConfig(lockC)['Intervention']['committedmode'] == 'True' # No escape key
+# Constants
+# These are only loaded once at the beginning
 BIBLE_VER = loadConfig(lockC)['Intervention']['bible_ver'] # 'drb' or 't_asv'
 BIBLE_CONTENT = []
 BG_COLOR = "#000000"
 LABEL_COLOR = "#ff9966"
+
+# Variables
+committedmode = None #Initially set to None
+
+def iscommittedmode(cm=None):
+    '''Get committedmode from CONFIG (or force it via arguments)'''
+    global committedmode
+    if cm == None:
+        if committedmode == None:
+            cm = loadConfig(lockC)['Intervention']['committedmode'] == 'True'
+    else:
+        committedmode = cm
+    return committedmode
 
 def readVerses(verses = []):
     '''Get verses of interest from CONFIG: to filter Bible verses further'''
@@ -46,11 +61,51 @@ def getRandomVerse():
     global BIBLE_CONTENT
     return random.choice(BIBLE_CONTENT)
 
-def fullscreen_popup():
+def fullscreen_popup(withcountdown = False):
     # BG_COLOR = "#cc3300"
     # LABEL_COLOR = "#ff9966"
+    if withcountdown:
+        cd = CountDown()
+        cd.mainloop()
     intervention = InterventionCover()
     intervention.mainloop()
+
+
+##### COUNTDOWN TIMER #####
+class CountDown(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Countdown")
+        self.geometry("%dx%d+%d+%d" % (200, 150, 100, 100))
+        self.attributes("-topmost", True)
+        #self.attributes("-fullscreen", True)
+        self.attributes("-alpha", 0.8)
+        self.overrideredirect(1)
+        self.config(bg=BG_COLOR)
+        #self.attributes("-disabled", True)
+
+        # Change the text on the label every second
+        message = tk.StringVar()
+        message.set(str(3))
+        Timer = tk.Message(self, textvariable=message,  font=("Helvetica", 32), fg="#fff", bg=BG_COLOR, width=int(self.winfo_screenwidth()) - 100,  anchor="n")
+        Timer.pack(fill=tk.BOTH, side=tk.TOP)
+
+        # Timer
+        c = 3
+        while c > 0:
+            message.set(str(c))
+            self.update()
+            sleep(1)
+            c -= 1
+
+        # Close after 3 seconds
+        self.after(100,self.close)
+
+    def close(self, event=None):
+        # set the running flag to False to stop updating the image
+        self.running = False
+        # close the window
+        self.destroy()
 
 ##### COVER FOR SECOND MONITOR #####
 # See: https://stackoverflow.com/questions/26286660/how-to-make-a-window-fullscreen-in-a-secondary-display-with-tkinter
@@ -63,6 +118,7 @@ class InterventionCover(tk.Tk):
         #self.master = master
 
         self.title("Cover")
+        self.committedmode=iscommittedmode()
         monitors = get_monitors_info()
         if len(monitors) >= 2: 
             sec = list(monitors)[monitornum] # select monitor
@@ -75,7 +131,8 @@ class InterventionCover(tk.Tk):
             "The fullscreen top-level window created with overrideredirect(1) can be fullscreen on the secondary screen after moving the position。"
             self.geometry("%dx%d+%d+%d" % (w1, h1, x1, y1))
             # root.wm_attributes('-fullscreen', True)
-            self.overrideredirect(1)
+            self.overrideredirect(True)
+            self.attributes("-topmost", True)
             self.resizable(0,0)
             # self.attributes("-topmost", True)
         # The following only needed if you want to make the cover appear on a single monitor, for some reason
@@ -118,12 +175,13 @@ class InterventionCover(tk.Tk):
 class Intervention(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
-
+        
+        self.committedmode = iscommittedmode()
         self.overrideredirect(True)
         self.attributes("-topmost", True)
         self.geometry("{0}x{1}+0+0".format(self.winfo_screenwidth(), self.winfo_screenheight()))
 
-        if not COMMITTEDMODE:
+        if not self.committedmode:
             self.bind("<Escape>", self.close)
         self.config(bg=BG_COLOR)
 
@@ -148,6 +206,9 @@ class Intervention(tk.Toplevel):
             quote = 'Remember that not getting what you want is sometimes a wonderful stroke of luck. - Dalai Lama'
         # quote = 'ZZZ'
         # quote = """Scientists have finally been able to read the oldest biblical text ever found. The 2,000-year-old scroll has been in the hands of archaeologists for decades. But it hasn’t been possible to read it, since it was too dangerous to open the charred and brittle scroll. Scientists have now been able to read it, using special imaging technology that can look into what’s inside. And it has found what was in there: the earliest evidence of a biblical text in its standardised form."""
+        # Replace special quotemarks with standard quotemarks
+        chars = {'‘':"'",'’':"'",'“':'"','”':'"'}
+        quote = quote.translate(str.maketrans(chars))
         quote_array = quote.split(" ")
         current_split_quote = quote_array[0]
         message.set(current_split_quote)
@@ -192,10 +253,14 @@ if __name__ == "__main__":
     #from threading import Lock
     #import time
     #t = time.monotonic()
-    COMMITTEDMODE = False
+    iscommittedmode(False) # For testing, set committedmode value
     #readVerses()
     readBible()
+    sleep(1)
     #print("%0.2f seconds" % (time.monotonic() - t))
     #print("Bible Content: {}".format(len(BIBLE_CONTENT)))
-    app = InterventionCover()
-    app.mainloop()
+    
+    #app = InterventionCover()
+    #app.mainloop()
+
+    fullscreen_popup(withcountdown=True)

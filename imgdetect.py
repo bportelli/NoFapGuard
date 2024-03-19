@@ -47,6 +47,12 @@ def imgreadandprocess(image_input_path):
     image = img_RGB.astype(uint8) #it's the casting of float32 to uint8
     return image
 
+def convertImgtoArray (image):
+    """Convert image to array nand fix color channels"""
+    image = nparray(image)
+    image = cv2cvtColor(image, cv2COLOR_BGR2RGB) # fix color channels
+    return image
+
 def focus_img_on_landmarks(image_input):
     with mp_pose.Pose(min_detection_confidence=0.5) as pose:
         
@@ -55,9 +61,6 @@ def focus_img_on_landmarks(image_input):
             image = imgreadandprocess(image_input)
         else:
             image = image_input
-
-        image = nparray(image)
-        image = cv2cvtColor(image, cv2COLOR_BGR2RGB) # fix color channels
 
         results = pose.process(image)
 

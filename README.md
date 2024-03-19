@@ -20,6 +20,12 @@ Modify config.ini to suit your preferences. (I would advise running with default
 ```
 python -m main
 ```
+If you would like to run this without a visible terminal, you can also create a .bat file with the following: 
+```
+@echo off
+start [venv-name-here]\Scripts\pythonw.exe -m main.py
+```
+The app can then be closed from the system tray icon (Right-click -> Exit program).
 ### Image Scans
 Full screenshots are taken (of multiple monitors if available) regularly, and with increased frequency when the main active window is a browser. This is a core feature of this app.
 
@@ -37,7 +43,7 @@ The keyword scanner searches window titles for "unsafe" keywords (which you defi
 
 ## Issues
 - Not tested on cartoons / drawings
-- No way to stop, besides a keyboard interrupt, closing the command prompt, or Task Manager
+- ~~No way to stop, besides a keyboard interrupt, closing the command prompt, or Task Manager~~ *System tray icon allows modification of some config items (e.g. committedmode on/off and detection thresholds), and allows app to be turned on and off*
 - Interventions only block up to 2 monitors
 - Images too small / low-qual to classify: I have mitigated this with MediaPipe to 'focus in' on body parts (and crop out the rest of the screen), but MP can be thrown off by images where... "not enough"... of a body is visible. Ideally, there would be a better way to trim off the parts of a screen that aren't part of "the image".
 - Sound is still on while the intervention is running.

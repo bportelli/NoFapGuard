@@ -10,9 +10,11 @@ from win32.win32api import MonitorFromWindow
 from confighandler import loadConfig, lockC
 from monitorsetup import get_monitors_info
 from screengrab import grab_rect
-from imgdetect import focus_img_on_landmarks, detect_unsafe_img
+from imgdetect import focus_img_on_landmarks, detect_unsafe_img, convertImgtoArray
 from intervention import fullscreen_popup
 from debugging import blurshrinkImgArray, compareImgs, saveArrayasImgCensored # TODO: is this last one still needed?
+#from mainwindow import checkapprunning
+from systray import checkapprunning
 
 ## Setup Variables
 # CONSTANTS
@@ -90,7 +92,7 @@ def run_intervention():
 
     return checkfreq, t
 
-def detection_threshold (detected, lockC, min_threshold = 0.27,):
+def detection_threshold (detected, lockC, min_threshold = 0.27):
     if not detected:
         return False # return runintervention
     
@@ -150,8 +152,11 @@ def p_iter(fgwindow=None, winrect=None, checkfreq=None, isbrowser=None):
         else:
             last_screenshot = blurshrinkImgArray(image_grabbed)
 
+        #Convert image to array and correct color channels
+        image = convertImgtoArray (image_grabbed)
+
         #Focus on landmarks
-        image = focus_img_on_landmarks(image_grabbed)
+        image = focus_img_on_landmarks(image)
 
         #Detect & classify unsafe elements
         detected = detect_unsafe_img(image) # can take a path or a numpy array / image
@@ -160,13 +165,19 @@ def p_iter(fgwindow=None, winrect=None, checkfreq=None, isbrowser=None):
         runintervention = detection_threshold(detected, lockC)
 
         # If not running intervention, maybe double-check to see if it's needed...
-        # Occasionally: If a browser is active (isbrowser), double-check using the grabbed image (in case MP cropped too much)
-        if (not runintervention) and isbrowser and (random.random() >= 0.5):
+        # Occasionally: If a browser is active (isbrowser), double-check using the grabbed image (in case MP cropped too much), or a full screenshot
+        dieroll = random.random()
+        if (not runintervention) and isbrowser and (dieroll >= 0.5):
             logging.debug('Double-checking...')
-            from debugging import convertImgtoArray
-            img_grab_array = convertImgtoArray(image_grabbed)
-            detected = detect_unsafe_img(img_grab_array) # can take a path or a numpy array / image
+            image_grabbed_rt = grab_rect(False) if (dieroll >= 0.75) else image_grabbed # use full screen grab if dieroll >= 0.75, otherwise use existing image_grabbed, wich may be just window
+            # Replace the current "image" that is being tested
+            image = convertImgtoArray(image_grabbed_rt)
+            detected = detect_unsafe_img(image) # can take a path or a numpy array / image
             runintervention = detection_threshold(detected, lockC)
+
+        #Debugging
+        # from debugging import saveArrayasImg
+        # saveArrayasImg(image, filename_prefix='logs/passing/')
 
         #Intervention
         global LOGTOFILEANDIMG
@@ -206,7 +217,7 @@ def mainloop(): # call p_iter()
     # first run
     checkfreq = 0
     t = time.monotonic()
-    while True:
+    while checkapprunning():
         #logging.debug('Loop started at time: %s' % (t) + '.')
         # On every loop, check if any of the browser_names are in the active window name and, if so, update the check frequency to 5 seconds.
         fgwindow, winrect, checkfreq, isbrowser = activewindow(None, False, checkfreq, False) # only passing in check frequency

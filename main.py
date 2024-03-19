@@ -5,11 +5,18 @@ from threading import Thread
 from launchers import mainloop  #, lockB, lockK, lockC
 from confighandler import loadConfig, lockC
 from intervention import readBible
+#from mainwindow import appwindow, lockAR
+from systray import appsystray
 
 ##################
 # Setup Threads
 # Setup Config    
 t_loadC = Thread(target=loadConfig, args=[lockC]) # add args=[lockC] to add a lock
+
+# Setup Main Window OR System Tray Icon
+#t_runM = Thread(target=appwindow, args=[lockAR])
+t_runM = Thread(target=appsystray)
+
 # Setup Keyword Check
 kwCheckisOn = loadConfig(lockC)['General']['kwcheckison'] == 'True' 
 if kwCheckisOn:
@@ -29,10 +36,12 @@ t_main = Thread(target=mainloop)
 t_loadC.daemon = True
 t_readB.daemon = True               # Python will exit when the main thread exits, even if this thread is still running. Set to false to keep running in the background
 t_main.daemon = True
+t_runM.daemon = True
 
 if kwCheckisOn:
     t_readK.daemon = True
 
+t_runM.start()
 t_loadC.start()
 t_readB.start()
 if kwCheckisOn:
@@ -48,5 +57,6 @@ t_main.join()                      # wait for the thread to finish
 
 # Auto-timeout (not currently active due to daemon / join)
 #sleepafter = int(raw_input('Enter the amount of seconds you want to run this: '))
-sleepafter = 60
+print('CLOSING...')
+sleepafter = 1
 sleep(sleepafter)

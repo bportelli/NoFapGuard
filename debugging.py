@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import time
 import matplotlib.image as mpimg
+from imgdetect import convertImgtoArray
 
 ## HELPFUL COPY / PASTES ##
 ## TEST / DEBUG ##
@@ -27,12 +28,6 @@ def viewArray (image_obj, title='Title'):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def convertImgtoArray (image):
-    """Convert image to array"""
-    image = np.array(image)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) # fix color channels
-    return image
-
 def blurshrinkImgArray (image):
     """Blur and shrink image"""
     # If image is not numpy array, convert it
@@ -41,7 +36,6 @@ def blurshrinkImgArray (image):
     image = cv2.blur(image, (20,20)) # blur image
     image = cv2.resize(image, (0,0), fx=0.2, fy=0.2) 
     return image
-
 
 def saveArrayasImgCensored (image, filename='', filename_prefix='', filename_suffix='-censored', detections=[], classes=[], small=False, includeuncensored=False):
     """Save array as image (temp) after censoring"""
