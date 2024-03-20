@@ -33,9 +33,10 @@ def getfullDisplayRects_noscaling_tuple ():
     return (l, t, r, b)
 
 def grab_rect (rect):
+    '''Grab a rectangular screenshot; return the image, the rect grabbed and the full display coordinates'''
+    fulldisplays = getfullDisplayRects_tuple()
     if type(rect) is bool and rect is False:
-        imDisplay = getRectAsImage(getfullDisplayRects_tuple())
-    else:
-        imDisplay = getRectAsImage(rect)
+        rect = fulldisplays
+    imDisplay = getRectAsImage(rect)
 
-    return imDisplay
+    return imDisplay, rect, fulldisplays

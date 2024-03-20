@@ -11,7 +11,7 @@ from confighandler import loadConfig, lockC
 from monitorsetup import get_monitors_info
 from screengrab import grab_rect
 from imgdetect import focus_img_on_landmarks, detect_unsafe_img, convertImgtoArray
-from intervention import fullscreen_popup
+from intervention import fullscreen_popup, countdown_popup, iswithcountdown
 from debugging import blurshrinkImgArray, compareImgs, saveArrayasImgCensored # TODO: is this last one still needed?
 #from mainwindow import checkapprunning
 from systray import checkapprunning
@@ -80,17 +80,56 @@ def activewindow(fgwindow=None, winrect=False, checkfreq=60, isbrowser=False, BR
     # if browser_names are not in the active window name, return defaults / inputs
     return (fgwindow, winrect, checkfreq, isbrowser)
 
-def run_intervention():
+def run_intervention(censorrect=None, withcountdown=False, runintervention = True):
     global time_since_last_intervention
+    global last_screenshot
     #global lockB
 
-    fullscreen_popup()
+    last_screenshot = None # reset last screenshot
+
+    if withcountdown:
+        countdown_popup(censorrect)
+        
+        # Check if user has cleaned up
+        fgwindow, winrect, checkfreq, isbrowser = activewindow()
+        image_grabbed, winrect, fulldisplays = grab_rect(winrect)
+        image = convertImgtoArray (image_grabbed)
+        image, croprect, originalshape = focus_img_on_landmarks(image)
+        detected = detect_unsafe_img(image) # can take a path or a numpy array / image
+        runintervention = detection_threshold(detected, lockC) 
+        
+    if runintervention:
+        fullscreen_popup()
     logging.debug('Intervention concluded / exited.')
     checkfreq = 5
     t = time.monotonic() # time at end of intervention
     time_since_last_intervention = t
 
     return checkfreq, t
+
+def convertcoords(winrect, fulldisplays, convto='img'):
+    x_offset = abs(fulldisplays[0])
+    y_offset = abs(fulldisplays[1])
+    if convto == 'img':
+        # Calculate image coordinates
+        coords = (winrect[0] + x_offset, winrect[1] + y_offset, winrect[2] + x_offset, winrect[3] + y_offset)
+    else:
+        # Calculate display coordinates
+        coords = (winrect[0] - x_offset, winrect[1] - y_offset, winrect[2] - x_offset, winrect[3] - y_offset)
+
+    return coords
+
+def getdetectionrect(winrect, fulldisplays, croprect, detected):
+    '''Returns a rect (on-screen location) for the first detected item'''
+    winrect_img = convertcoords(winrect,fulldisplays,'img')
+    totalcrop = [croprect[0]+winrect_img[0], croprect[1]+winrect_img[1], croprect[2]+winrect_img[0], croprect[3]+winrect_img[1]]
+    if detected:
+        detectrect = detected[0]['box']
+        # converting from xywh to xyxy
+        detectrect = [detectrect[0], detectrect[1], detectrect[2] + detectrect[0], detectrect[3] + detectrect[1]]
+        censorrect = [detectrect[0] + totalcrop[0], detectrect[1] + totalcrop[1], detectrect[2] + totalcrop[0], detectrect[3] + totalcrop[1]]
+        censorrect = convertcoords(censorrect,fulldisplays,'disp')
+    return censorrect
 
 def detection_threshold (detected, lockC, min_threshold = 0.27):
     if not detected:
@@ -133,7 +172,7 @@ def p_iter(fgwindow=None, winrect=None, checkfreq=None, isbrowser=None):
     try: # force through exceptions for now (TODO: handle exceptions)
     #if True:
         #Grab screenshot
-        image_grabbed = grab_rect(winrect)
+        image_grabbed, winrect, fulldisplays = grab_rect(winrect)
 
         # Compare current screenshot to last
         # Skip visual testing if the images are the same
@@ -155,8 +194,8 @@ def p_iter(fgwindow=None, winrect=None, checkfreq=None, isbrowser=None):
         #Convert image to array and correct color channels
         image = convertImgtoArray (image_grabbed)
 
-        #Focus on landmarks
-        image = focus_img_on_landmarks(image)
+        #Focus on landmarks (croprect: how much has the image been cropped by)
+        image, croprect, originalshape = focus_img_on_landmarks(image)
 
         #Detect & classify unsafe elements
         detected = detect_unsafe_img(image) # can take a path or a numpy array / image
@@ -169,7 +208,10 @@ def p_iter(fgwindow=None, winrect=None, checkfreq=None, isbrowser=None):
         dieroll = random.random()
         if (not runintervention) and isbrowser and (dieroll >= 0.5):
             logging.debug('Double-checking...')
-            image_grabbed_rt = grab_rect(False) if (dieroll >= 0.75) else image_grabbed # use full screen grab if dieroll >= 0.75, otherwise use existing image_grabbed, wich may be just window
+            if (dieroll >= 0.75): # use full screen grab if dieroll >= 0.75, otherwise use existing image_grabbed, wich may be just window
+                image_grabbed_rt, rect, fulldisplays = grab_rect(False)
+            else:
+                image_grabbed_rt = image_grabbed 
             # Replace the current "image" that is being tested
             image = convertImgtoArray(image_grabbed_rt)
             detected = detect_unsafe_img(image) # can take a path or a numpy array / image
@@ -182,6 +224,11 @@ def p_iter(fgwindow=None, winrect=None, checkfreq=None, isbrowser=None):
         #Intervention
         global LOGTOFILEANDIMG
         if runintervention:
+            # Identify the location (on screen) of the first detection
+            if iswithcountdown():
+                censorrect = getdetectionrect(winrect, fulldisplays, croprect, detected)
+            else:
+                censorrect = None
             #Logging
             if LOGTOFILEANDIMG:
                 #from debugging import saveArrayasImgCensored
@@ -190,7 +237,7 @@ def p_iter(fgwindow=None, winrect=None, checkfreq=None, isbrowser=None):
                 logging.info('Saved image: %s' % (fn))
 
             #Intervention
-            checkfreq, t = run_intervention()
+            checkfreq, t = run_intervention(censorrect, iswithcountdown())
 
         #TODO: Logging for testing / debugging - remove when done   
         elif detected: # if detected but no intervention run

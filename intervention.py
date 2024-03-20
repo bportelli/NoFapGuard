@@ -17,6 +17,7 @@ LABEL_COLOR = "#ff9966"
 
 # Variables
 committedmode = None #Initially set to None
+WITHCOUNTDOWN = None #Initially set to None
 
 def iscommittedmode(cm=None):
     '''Get committedmode from CONFIG (or force it via arguments)'''
@@ -27,6 +28,12 @@ def iscommittedmode(cm=None):
     else:
         committedmode = cm
     return committedmode
+
+def iswithcountdown():
+    '''Get WITHCOUNTDOWN from CONFIG (or force it via arguments)'''
+    global WITHCOUNTDOWN
+    WITHCOUNTDOWN = loadConfig(lockC)['Intervention']['withcountdown'] == 'True'
+    return WITHCOUNTDOWN
 
 def readVerses(verses = []):
     '''Get verses of interest from CONFIG: to filter Bible verses further'''
@@ -61,22 +68,26 @@ def getRandomVerse():
     global BIBLE_CONTENT
     return random.choice(BIBLE_CONTENT)
 
-def fullscreen_popup(withcountdown = False):
+def countdown_popup(rect = None):
+    if rect == None:
+        rect = (200, 150, 100, 100)
+    else:
+        rect = (rect[2]-rect[0], rect[3]-rect[1], rect[0], rect[1])
+    cd = CountDown(rect)
+    cd.mainloop()
+
+def fullscreen_popup():
     # BG_COLOR = "#cc3300"
     # LABEL_COLOR = "#ff9966"
-    if withcountdown:
-        cd = CountDown()
-        cd.mainloop()
     intervention = InterventionCover()
     intervention.mainloop()
 
-
 ##### COUNTDOWN TIMER #####
 class CountDown(tk.Tk):
-    def __init__(self):
+    def __init__(self, rect=(200, 150, 100, 100)):
         super().__init__()
         self.title("Countdown")
-        self.geometry("%dx%d+%d+%d" % (200, 150, 100, 100))
+        self.geometry("%dx%d+%d+%d" % rect)
         self.attributes("-topmost", True)
         #self.attributes("-fullscreen", True)
         self.attributes("-alpha", 0.8)
@@ -263,4 +274,4 @@ if __name__ == "__main__":
     #app = InterventionCover()
     #app.mainloop()
 
-    fullscreen_popup(withcountdown=True)
+    fullscreen_popup()

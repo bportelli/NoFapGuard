@@ -33,9 +33,10 @@ landmarksindexlist = [ # List of landmarks of interest
 
 # Functions
 def processnolandmarks(image):
-    # remove bottom 10% and 10% from either side
+    # remove bottom 10% and 5% from each side
+    croprect = (int(image.shape[1]*0.05), 0, int(image.shape[1]*0.95), int(image.shape[0]*0.9))
     image = image[0:int(image.shape[0]*0.9), int(image.shape[1]*0.05):int(image.shape[1]*0.95)]
-    return image
+    return image, croprect
 
 def imgreadandprocess(image_input_path):
     import matplotlib.image as mpimg # NB: contains imread and imsave
@@ -54,6 +55,7 @@ def convertImgtoArray (image):
     return image
 
 def focus_img_on_landmarks(image_input):
+    croprect = (0,0,0,0) # The final crop to focus on landmarks, initially 0
     with mp_pose.Pose(min_detection_confidence=0.5) as pose:
         
         # is image a string (path?) or an image?
@@ -62,16 +64,17 @@ def focus_img_on_landmarks(image_input):
         else:
             image = image_input
 
+        h , w , c = image.shape
+
         results = pose.process(image)
 
         # No landmarks: return a slightly cropped original image
         if not results.pose_landmarks:
-            img_out = processnolandmarks(image)
+            img_out, croprect = processnolandmarks(image)
             logging.info('MP: No landmarks found.')
-            return img_out
+            return img_out, croprect, (w,h)
         
         landmarks = results.pose_landmarks.landmark
-        h , w , c = image.shape
 
         # Work out coordinates for a box of 400px around (rightCx, rightCy)
         # CONSTANTS
@@ -97,17 +100,20 @@ def focus_img_on_landmarks(image_input):
             leftbound = max(0, min(leftbound, rightCx - bwxoffset))
             rightbound = min(w, max(rightbound, rightCx + bwxoffset))
         
+        # crop rect (x1,y1,x2,y2)
+        croprect = (leftbound,upperbound,rightbound,lowerbound)
+
         # crop image
         img_out = image [upperbound:lowerbound, leftbound:rightbound]
 
         # No landmarks: return a slightly cropped original image
         if img_out.shape[0] < 10 or img_out.shape[1] < 10:
-            img_out = processnolandmarks(image)
+            img_out, croprect = processnolandmarks(image)
             logging.error('Image too small. MP extrapolating only landmarks beyond image boundaries?')
-            return img_out
+            return img_out, croprect, (w,h)
         
         logging.debug('MP Landmarks found.')
-        return img_out
+        return img_out, croprect, (w,h)
     
 def detect_unsafe_img (imagepath):
     if type(imagepath) == str: # if imagepath is a path
