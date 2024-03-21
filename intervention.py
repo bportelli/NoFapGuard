@@ -73,6 +73,9 @@ def countdown_popup(rect = None):
         rect = (200, 150, 100, 100)
     else:
         rect = (rect[2]-rect[0], rect[3]-rect[1], rect[0], rect[1])
+    # Impose minimum height and width of 100 and add a 10 pixel buffer/padding around the rect
+    buffer = 10
+    rect = (max(rect[0], 100) + (buffer * 2), max(rect[1],100) + (buffer * 2), rect[2] + buffer, rect[3] + buffer)
     cd = CountDown(rect)
     cd.mainloop()
 
@@ -90,7 +93,7 @@ class CountDown(tk.Tk):
         self.geometry("%dx%d+%d+%d" % rect)
         self.attributes("-topmost", True)
         #self.attributes("-fullscreen", True)
-        self.attributes("-alpha", 0.8)
+        self.attributes("-alpha", 0.85)
         self.overrideredirect(1)
         self.config(bg=BG_COLOR)
         #self.attributes("-disabled", True)
@@ -98,7 +101,7 @@ class CountDown(tk.Tk):
         # Change the text on the label every second
         message = tk.StringVar()
         message.set(str(3))
-        Timer = tk.Message(self, textvariable=message,  font=("Helvetica", 32), fg="#fff", bg=BG_COLOR, width=int(self.winfo_screenwidth()) - 100,  anchor="n")
+        Timer = tk.Message(self, textvariable=message,  font=("Helvetica", 32), fg="#fff", bg=BG_COLOR, width=int(self.winfo_screenwidth()), justify="center", anchor="center", pady=int(self.winfo_screenheight()/2))
         Timer.pack(fill=tk.BOTH, side=tk.TOP)
 
         # Timer
@@ -274,4 +277,5 @@ if __name__ == "__main__":
     #app = InterventionCover()
     #app.mainloop()
 
-    fullscreen_popup()
+    #fullscreen_popup()
+    countdown_popup()

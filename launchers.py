@@ -88,6 +88,14 @@ def run_intervention(censorrect=None, withcountdown=False, runintervention = Tru
     last_screenshot = None # reset last screenshot
 
     if withcountdown:
+        ## Fix censorrect for monitor scaling (NOTE: this is based on foreground window)
+        winMonitorH = str(MonitorFromWindow(GetForegroundWindow()).handle) # Which monitor is this (mostly/fully) on? Return handle.
+        monitorinfo = get_monitors_info()[str(winMonitorH)] 
+        fontscale = monitorinfo[1] / 100
+        # fix for monitor scaling (where there is none, this will be x 1)
+        censorrect = tuple(int(c / fontscale) for c in censorrect)
+        ##
+
         countdown_popup(censorrect)
         
         # Check if user has cleaned up
@@ -100,7 +108,7 @@ def run_intervention(censorrect=None, withcountdown=False, runintervention = Tru
         
     if runintervention:
         fullscreen_popup()
-    logging.debug('Intervention concluded / exited.')
+        logging.debug('Intervention concluded / exited.')
     checkfreq = 5
     t = time.monotonic() # time at end of intervention
     time_since_last_intervention = t
@@ -119,16 +127,32 @@ def convertcoords(winrect, fulldisplays, convto='img'):
 
     return coords
 
+def findpriorityclass(detected):
+    '''Returns the detected class with the lowest threshold'''
+    class_thresholds = loadConfig(lockC)['Class_Thresholds'] 
+    
+    # Initialise with first detected
+    classfound = detected[0]
+    for d in detected:
+        # find the class (from detected) with the lowest threshold
+        if (float(class_thresholds[d['class'].lower()]) < float(class_thresholds[classfound['class'].lower()])):
+            classfound = d
+
+    return classfound
+
 def getdetectionrect(winrect, fulldisplays, croprect, detected):
-    '''Returns a rect (on-screen location) for the first detected item'''
+    '''Returns a rect (on-screen location) for a detected item'''
     winrect_img = convertcoords(winrect,fulldisplays,'img')
     totalcrop = [croprect[0]+winrect_img[0], croprect[1]+winrect_img[1], croprect[2]+winrect_img[0], croprect[3]+winrect_img[1]]
     if detected:
-        detectrect = detected[0]['box']
+        # Identify the "highest-priority" class (class with lowest threshold)
+        classfound = findpriorityclass(detected)
+        detectrect = classfound['box']
         # converting from xywh to xyxy
         detectrect = [detectrect[0], detectrect[1], detectrect[2] + detectrect[0], detectrect[3] + detectrect[1]]
         censorrect = [detectrect[0] + totalcrop[0], detectrect[1] + totalcrop[1], detectrect[2] + totalcrop[0], detectrect[3] + totalcrop[1]]
         censorrect = convertcoords(censorrect,fulldisplays,'disp')
+        
     return censorrect
 
 def detection_threshold (detected, lockC, min_threshold = 0.27):
@@ -224,7 +248,7 @@ def p_iter(fgwindow=None, winrect=None, checkfreq=None, isbrowser=None):
         #Intervention
         global LOGTOFILEANDIMG
         if runintervention:
-            # Identify the location (on screen) of the first detection
+            # Identify the location (on screen) of a detection
             if iswithcountdown():
                 censorrect = getdetectionrect(winrect, fulldisplays, croprect, detected)
             else:
